@@ -61,15 +61,34 @@ def softmax_loss_vectorized(W, X, y, reg):
   loss = 0.0
   dW = np.zeros_like(W)
 
-  #############################################################################
-  # TODO: Compute the softmax loss and its gradient using no explicit loops.  #
-  # Store the loss in loss and the gradient in dW. If you are not careful     #
-  # here, it is easy to run into numeric instability. Don't forget the        #
-  # regularization!                                                           #
-  #############################################################################
-  pass
-  #############################################################################
-  #                          END OF YOUR CODE                                 #
-  #############################################################################
+  N = X.shape[0]
+  D = X.shape[1]
+  C = W.shape[1]
 
+  # f -> (N,C)
+  f = X.dot(W)
+
+  # Subtract each row of fs by the maximum element for numerical stability
+  f -= np.max(f, axis=1).reshape(N,1)
+  # e^(X*W - k)
+  f = np.exp(f)
+
+  # Get the sum of each row
+  s = np.sum(f, axis=1).reshape(N,1)
+  # Normalize each row to have values that sum to 1
+  prob = f / s
+
+  loss += np.sum(-np.log(prob[np.arange(N), y].clip(min=0.00000001)))
+
+  dW = X.T.dot(prob)
+  # How do I vectorize this? dW[:,y] -= X.T does not work
+  for xi, yi in zip(X,y):
+      dW[:, yi] -= xi
+
+  loss /= N
+  aux = 0.5 * reg * W
+  loss += np.sum(aux * aux)
+
+  dW /= N
+  dW += reg * W
   return loss, dW
