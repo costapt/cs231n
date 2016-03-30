@@ -1,5 +1,6 @@
 import numpy as np
 from random import shuffle
+from scipy.sparse import csr_matrix
 
 def softmax_loss_naive(W, X, y, reg):
   """
@@ -80,14 +81,13 @@ def softmax_loss_vectorized(W, X, y, reg):
 
   loss += np.sum(-np.log(prob[np.arange(N), y].clip(min=0.00000001)))
 
-  dW = X.T.dot(prob)
-  # How do I vectorize this? dW[:,y] -= X.T does not work
-  for xi, yi in zip(X,y):
-      dW[:, yi] -= xi
-
   loss /= N
   aux = 0.5 * reg * W
   loss += np.sum(aux * aux)
+
+  dW = X.T.dot(prob)
+  k = csr_matrix((np.ones(N), (np.arange(N), y)), shape=(N,C)).toarray()
+  dW -= X.T.dot(k)
 
   dW /= N
   dW += reg * W
