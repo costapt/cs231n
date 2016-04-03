@@ -3,6 +3,11 @@ import matplotlib.pyplot as plt
 from scipy.sparse import csr_matrix
 
 class SoftmaxGate(object):
+  """
+  A softmax gate in the neural network. It performs the forward pass, returning
+  the loss of the network and stores the local gradients. These gradients are
+  then returned on the backward pass.
+  """
 
   def forward(self, W, b, X, y):
     # Initialize the loss to zero.
@@ -41,8 +46,7 @@ class SoftmaxGate(object):
 
     # Compute local gradient of x
     self.dX = f.dot(W.T) / s
-    for i, yi in enumerate(y):
-        self.dX[i, :] -= W[:, yi]
+    self.dX -= k.dot(W.T)
     self.dX /= N
 
     return loss
@@ -51,6 +55,11 @@ class SoftmaxGate(object):
     return self.dW, self.dX, self.dB
 
 class ReLUGate(object):
+    """
+    A Rectified Linear Unit (ReLU) gate. On the forward pass returns the
+    max(0, z) and stores the result. The backward pass applies the chain rule
+    by multiplying the local gradient by the top gradient.
+    """
 
     def forward(self, z):
         self.relu = np.maximum(0,z)
@@ -141,27 +150,19 @@ class TwoLayerNet(object):
 
     # Backward pass: compute gradients
     grads = {}
-    #############################################################################
-    # TODO: Compute the backward pass, computing the derivatives of the weights #
-    # and biases. Store the results in the grads dictionary. For example,       #
-    # grads['W1'] should store the gradient on W1, and be a matrix of same size #
-    #############################################################################
+
     dW2, dZ1, dB2 = softmax.backward()
     dW2 += reg * W2
     grads['W2'] = dW2
-
     grads['b2'] = dB2
 
-    dZ1 = relu.backward(dZ1)
-    dW1 = X.T.dot(dZ1)
+    dH1 = relu.backward(dZ1)
+    dW1 = X.T.dot(dH1)
     dW1 += reg * W1
     grads['W1'] = dW1
 
-    dB1 = np.sum(dZ1, axis=0)
+    dB1 = np.sum(dH1, axis=0)
     grads['b1'] = dB1
-    #############################################################################
-    #                              END OF YOUR CODE                             #
-    #############################################################################
 
     return loss, grads
 
@@ -195,42 +196,26 @@ class TwoLayerNet(object):
     val_acc_history = []
 
     for it in range(num_iters):
-      X_batch = None
-      y_batch = None
 
-      #########################################################################
-      # TODO: Create a random minibatch of training data and labels, storing  #
-      # them in X_batch and y_batch respectively.                             #
-      #########################################################################
+      # Create a random minibatch of training data and labels, storing
+      # them in X_batch and y_batch respectively.
       idx = np.random.choice(num_train, batch_size)
       X_batch = X[idx]
       y_batch = y[idx]
-      #########################################################################
-      #                             END OF YOUR CODE                          #
-      #########################################################################
 
       # Compute loss and gradients using the current minibatch
       loss, grads = self.loss(X_batch, y=y_batch, reg=reg)
       loss_history.append(loss)
 
-      #########################################################################
-      # TODO: Use the gradients in the grads dictionary to update the         #
-      # parameters of the network (stored in the dictionary self.params)      #
-      # using stochastic gradient descent. You'll need to use the gradients   #
-      # stored in the grads dictionary defined above.                         #
-      #########################################################################
+      # Use the gradients to update the parameters of the network
       dW1 = grads['W1']
       dW2 = grads['W2']
       dB1 = grads['b1']
       dB2 = grads['b2']
-
       self.params['W1'] -= learning_rate * dW1
       self.params['W2'] -= learning_rate * dW2
       self.params['b1'] -= learning_rate * dB1
       self.params['b2'] -= learning_rate * dB2
-      #########################################################################
-      #                             END OF YOUR CODE                          #
-      #########################################################################
 
       if verbose and it % 100 == 0:
         print('iteration %d / %d: loss %f' % (it, num_iters, loss))
@@ -267,18 +252,11 @@ class TwoLayerNet(object):
       the elements of X. For all i, y_pred[i] = c means that X[i] is predicted
       to have class c, where 0 <= c < C.
     """
-    y_pred = None
 
-    ###########################################################################
-    # TODO: Implement this function; it should be VERY simple!                #
-    ###########################################################################
     relu = ReLUGate()
     h1 = X.dot(self.params['W1']) + self.params['b1']
     z1 = relu.forward(h1)
     pred = z1.dot(self.params['W2']) + self.params['b2']
     y_pred = np.argmax(pred, axis=1)
-    ###########################################################################
-    #                              END OF YOUR CODE                           #
-    ###########################################################################
 
     return y_pred
