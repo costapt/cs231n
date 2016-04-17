@@ -9,29 +9,29 @@ class Solver(object):
   models. The Solver performs stochastic gradient descent using different
   update rules defined in optim.py.
 
-  The solver accepts both training and validataion data and labels so it can
+  The solver accepts both training and validation data and labels so it can
   periodically check classification accuracy on both training and validation
   data to watch out for overfitting.
 
   To train a model, you will first construct a Solver instance, passing the
-  model, dataset, and various optoins (learning rate, batch size, etc) to the
+  model, dataset, and various options (learning rate, batch size, etc) to the
   constructor. You will then call the train() method to run the optimization
   procedure and train the model.
-  
+
   After the train() method returns, model.params will contain the parameters
   that performed best on the validation set over the course of training.
   In addition, the instance variable solver.loss_history will contain a list
   of all losses encountered during training and the instance variables
   solver.train_acc_history and solver.val_acc_history will be lists containing
   the accuracies of the model on the training and validation set at each epoch.
-  
+
   Example usage might look something like this:
-  
+
   data = {
     'X_train': # training data
     'y_train': # training labels
     'X_val': # validation data
-    'X_train': # validation labels
+    'y_val': # validation labels
   }
   model = MyAwesomeModel(hidden_size=100, reg=10)
   solver = Solver(model, data,
@@ -74,7 +74,7 @@ class Solver(object):
   def __init__(self, model, data, **kwargs):
     """
     Construct a new Solver instance.
-    
+
     Required arguments:
     - model: A model object conforming to the API described above
     - data: A dictionary of training and validation data with the following:
@@ -82,7 +82,7 @@ class Solver(object):
       'X_val': Array of shape (N_val, d_1, ..., d_k) giving validation images
       'y_train': Array of shape (N_train,) giving labels for training images
       'y_val': Array of shape (N_val,) giving labels for validation images
-      
+
     Optional arguments:
     - update_rule: A string giving the name of an update rule in optim.py.
       Default is 'sgd'.
@@ -105,7 +105,7 @@ class Solver(object):
     self.y_train = data['y_train']
     self.X_val = data['X_val']
     self.y_val = data['y_val']
-    
+
     # Unpack keyword arguments
     self.update_rule = kwargs.pop('update_rule', 'sgd')
     self.optim_config = kwargs.pop('optim_config', {})
@@ -146,8 +146,8 @@ class Solver(object):
     # Make a deep copy of the optim_config for each parameter
     self.optim_configs = {}
     for p in self.model.params:
-      d = {k: v for k, v in self.optim_config.iteritems()}
-      self.optim_configs[p] = d
+        d = {k: v for k, v in iter(self.optim_config.items())}
+        self.optim_configs[p] = d
 
 
   def _step(self):
@@ -166,7 +166,7 @@ class Solver(object):
     self.loss_history.append(loss)
 
     # Perform a parameter update
-    for p, w in self.model.params.iteritems():
+    for p, w in iter(self.model.params.items()):
       dw = grads[p]
       config = self.optim_configs[p]
       next_w, next_config = self.update_rule(w, dw, config)
@@ -177,7 +177,7 @@ class Solver(object):
   def check_accuracy(self, X, y, num_samples=None, batch_size=100):
     """
     Check accuracy of the model on the provided data.
-    
+
     Inputs:
     - X: Array of data, of shape (N, d_1, ..., d_k)
     - y: Array of labels, of shape (N,)
@@ -185,12 +185,12 @@ class Solver(object):
       on num_samples datapoints.
     - batch_size: Split X and y into batches of this size to avoid using too
       much memory.
-      
+
     Returns:
     - acc: Scalar giving the fraction of instances that were correctly
       classified by the model.
     """
-    
+
     # Maybe subsample the data
     N = X.shape[0]
     if num_samples is not None and N > num_samples:
@@ -204,7 +204,7 @@ class Solver(object):
     if N % batch_size != 0:
       num_batches += 1
     y_pred = []
-    for i in xrange(num_batches):
+    for i in range(int(num_batches)):
       start = i * batch_size
       end = (i + 1) * batch_size
       scores = self.model.loss(X[start:end])
@@ -223,13 +223,13 @@ class Solver(object):
     iterations_per_epoch = max(num_train / self.batch_size, 1)
     num_iterations = self.num_epochs * iterations_per_epoch
 
-    for t in xrange(num_iterations):
+    for t in range(int(num_iterations)):
       self._step()
 
       # Maybe print training loss
       if self.verbose and t % self.print_every == 0:
-        print '(Iteration %d / %d) loss: %f' % (
-               t + 1, num_iterations, self.loss_history[-1])
+        print('(Iteration %d / %d) loss: %f' % (
+               t + 1, num_iterations, self.loss_history[-1]))
 
       # At the end of every epoch, increment the epoch counter and decay the
       # learning rate.
@@ -251,16 +251,15 @@ class Solver(object):
         self.val_acc_history.append(val_acc)
 
         if self.verbose:
-          print '(Epoch %d / %d) train acc: %f; val_acc: %f' % (
-                 self.epoch, self.num_epochs, train_acc, val_acc)
+          print('(Epoch %d / %d) train acc: %f; val_acc: %f' % (
+                 self.epoch, self.num_epochs, train_acc, val_acc))
 
         # Keep track of the best model
         if val_acc > self.best_val_acc:
           self.best_val_acc = val_acc
           self.best_params = {}
-          for k, v in self.model.params.iteritems():
+          for k, v in iter(self.model.params.items()):
             self.best_params[k] = v.copy()
 
     # At the end of training swap the best params into the model
     self.model.params = self.best_params
-
