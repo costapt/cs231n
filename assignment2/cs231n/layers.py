@@ -226,19 +226,15 @@ def batchnorm_backward_alt(dout, cache):
 
   Inputs / outputs: Same as batchnorm_backward
   """
-  dx, dgamma, dbeta = None, None, None
-  #############################################################################
-  # TODO: Implement the backward pass for batch normalization. Store the      #
-  # results in the dx, dgamma, and dbeta variables.                           #
-  #                                                                           #
-  # After computing the gradient with respect to the centered inputs, you     #
-  # should be able to compute gradients with respect to the inputs in a       #
-  # single statement; our implementation fits on a single 80-character line.  #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  gamma, xhat, xcorrected, istd, _ = cache
+  N, _ = dout.shape
+
+  dbeta = np.sum(dout, axis=0)
+  dgamma = np.sum(xhat * dout, axis=0)
+  dx = (gamma * istd / N) * (
+          N*dout -
+          np.sum(dout * xcorrected, axis=0)*xcorrected*istd**2 -
+          np.sum(dout, axis=0))
 
   return dx, dgamma, dbeta
 
