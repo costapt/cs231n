@@ -282,6 +282,10 @@ class FullyConnectedNet(object):
         else:
             prev_input, caches[layer-1] = forward(affine_relu_forward, layer)
 
+        if self.use_dropout:
+            prev_input, c = dropout_forward(prev_input, self.dropout_param)
+            caches[layer-1] += c
+
     scores, caches[self.num_layers - 1] = forward(affine_forward,
                                                   self.num_layers)
 
@@ -318,14 +322,18 @@ class FullyConnectedNet(object):
         grads[betalayer(layer)] = dbeta
         return df
 
-
     dout = backward(affine_backward, self.num_layers, dout,
                     caches[self.num_layers - 1])
     for layer in reversed(range(1, self.num_layers)):
+        c = caches[layer-1]
+        if self.use_dropout:
+            dropout_cache = c[-2:]
+            dout = dropout_backward(dout, dropout_cache)
+            c = c[0:-2]
+
         if self.use_batchnorm:
-            dout = batchnorm_backward_aux(layer, dout, caches[layer-1])
+            dout = batchnorm_backward_aux(layer, dout, c)
         else:
-            dout = backward(affine_relu_backward, layer, dout,
-                            caches[layer - 1])
+            dout = backward(affine_relu_backward, layer, dout, c)
 
     return loss, grads
